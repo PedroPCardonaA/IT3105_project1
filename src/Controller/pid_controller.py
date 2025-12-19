@@ -1,8 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple, Union
-
-import jax
+from typing import Optional, Tuple, Union
 import jax.numpy as jnp
 
 Array = jnp.ndarray
