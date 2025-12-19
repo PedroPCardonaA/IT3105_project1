@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 from dataclasses import dataclass 
-from typing import Literal, Tuple  
+from typing import Literal, Tuple, Union  
 
-import jax
 import jax.numpy as jnp
+
+from .base import PlantBase
+from ..utils import euler_step, rk4_step
 
 @dataclass(frozen=True)
 class DCMotorParams:
@@ -44,20 +46,7 @@ def _deriv(params: DCMotorParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.nda
 
     return jnp.array([di, domega, dtheta], dtype=state.dtype)
 
-def _rk4_step(params: DCMotorParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray, dt: float) -> jnp.ndarray:
-    """Advance the state by one Runge–Kutta 4 integration step."""
-    k1 = _deriv(params, state, u, d)
-    k2 = _deriv(params, state + 0.5 * dt * k1, u, d)
-    k3 = _deriv(params, state + 0.5 * dt * k2, u, d)
-    k4 = _deriv(params, state + dt * k3, u, d)
-    return state + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-
-def _euler_step(params: DCMotorParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray, dt: float) -> jnp.ndarray:
-    """Advance the state by one forward Euler integration step."""
-    return state + dt * _deriv(params, state, u, d)
-
-
-class DCMotorPlant:
+class DCMotorPlant(PlantBase):
     """Represents a discrete-time DC motor plant simulation with configurable integration and outputs.
     Args:
         params (DCMotorParams, optional): Motor parameters instance.
@@ -101,25 +90,14 @@ class DCMotorPlant:
             'full': state,
         }[self.output_kind]
     
-    def step(self, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray = 0.0) -> jnp.ndarray:
+    def step(self, state: jnp.ndarray, u: jnp.ndarray, d: Union[jnp.ndarray, float] = 0.0) -> Tuple[jnp.ndarray, jnp.ndarray]:
         """Advance one discrete step and return `(next_state, output)`."""
         u = jnp.array(u, dtype=self.dtype)
         d = jnp.array(d, dtype=self.dtype)
 
         if self.integrator == 'rk4':
-            next_state = _rk4_step(self.params, state, u, d, self.dt)
+            next_state = rk4_step(_deriv, self.params, state, u, d, self.dt)
         else:
-            next_state = _euler_step(self.params, state, u, d, self.dt)
+            next_state = euler_step(_deriv, self.params, state, u, d, self.dt)
         y = self.output(next_state)
         return next_state, y
-    
-
-    def simulate(plant: DCMotorPlant, u_seq: jnp.ndarray, d_seq: jnp.ndarray, state0: jnp.ndarray):
-        """Simulate a DC motor over sequences of inputs and disturbances."""
-        def one_step(state, inputs):
-            u, d = inputs
-            next_state, y = plant.step(state, u, d)
-            return next_state, (next_state, y)
-    
-        _, (state_seq, y_seq) = jax.lax.scan(one_step, state0, (u_seq, d_seq))
-        return state_seq, y_seq
