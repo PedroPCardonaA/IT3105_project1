@@ -20,3 +20,7 @@ def rk4_step(deriv_fn: DerivFn, params: Any, state: jnp.ndarray, u: jnp.ndarray,
 def euler_step(deriv_fn: DerivFn, params: Any, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray, dt: float) -> jnp.ndarray:
     """Advance state one step with forward Euler integration."""
     return state + dt * deriv_fn(params, state, u, d)
+
+def mean_squared_error(y_true: jnp.ndarray, y_pred: jnp.ndarray) -> jnp.ndarray:
+    """Compute the mean squared error between true and predicted values."""
+    return jnp.mean((y_true - y_pred) ** 2)

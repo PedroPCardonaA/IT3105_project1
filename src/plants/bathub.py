@@ -66,7 +66,7 @@ class BathubPlant(PlantBase):
 
         if isinstance(state0, tuple):
             state0 = state0[0]
-        state = jnp.array(state0, dtype=self.dtype)
+        state = jnp.array([state0], dtype=self.dtype)
         return state
     
     def output(self, state: jnp.ndarray) -> jnp.ndarray:

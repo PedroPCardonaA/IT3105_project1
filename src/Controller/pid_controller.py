@@ -56,7 +56,8 @@ class PIDController(ControllerBase):
 
         dt_array = jnp.array(dt, dtype=dtype)
 
-        e_int = state.e_init * dt_array
+        # The integral is the accumulated error
+        e_int = state.e_init + e * dt_array
         de_dt = (e - state.e_prev) / dt_array
 
         return jnp.array([e, e_int, de_dt], dtype=dtype)
@@ -84,7 +85,8 @@ class PIDController(ControllerBase):
 
         dt_array = jnp.array(dt, dtype=dtype)
 
-        e_int = state.e_init * dt_array
+        # Accumulate integral error
+        e_int = state.e_init + e * dt_array
 
         if i_limit is not None:
             lim = jnp.array(float(i_limit), dtype=dtype)
@@ -96,7 +98,7 @@ class PIDController(ControllerBase):
         if u_min is not None or u_max is not None:
             u = jnp.clip(u, a_min=u_min, a_max=u_max)
 
-        next_state = PIDState(e_init=e_int / dt_array, e_prev=e)
+        next_state = PIDState(e_init=e_int, e_prev=e)
         return next_state, jnp.array([u], dtype=dtype)
 
     def reset(self, state0: Optional[PIDState] = None) -> PIDState:
