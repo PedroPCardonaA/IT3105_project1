@@ -9,14 +9,19 @@ import jax.numpy as jnp
 
 
 class PlantBase(ABC):
-    """Common interface for plants with reset, output, step, and simulate."""
+    """Common interface for plants with reset, output, step, and simulate.
+
+    Implementations should define how to initialize state, map state to outputs,
+    and advance dynamics one discrete step. A shared ``simulate`` convenience is
+    provided using ``jax.lax.scan``.
+    """
 
     dt: float
     dtype: jnp.dtype
 
     @abstractmethod
     def reset(self, state0: Any) -> jnp.ndarray:
-        """Return initial state for the plant."""
+        """Return initial state for the plant as a JAX array."""
 
     @abstractmethod
     def output(self, state: jnp.ndarray) -> jnp.ndarray:

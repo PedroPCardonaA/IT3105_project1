@@ -1,3 +1,5 @@
+"""Discrete-time bathtub (tank) model utilities using JAX numerics."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Tuple, Union
@@ -9,6 +11,7 @@ from ..utils import euler_step, rk4_step
 
 @dataclass(frozen=True)
 class BathubParams:
+    """Geometric and hydraulic parameters for the bathtub tank."""
     A: float = 1.0 
     C: float = 0.5
     g: float = 9.81
@@ -20,12 +23,14 @@ class BathubParams:
 
 
 def _outflow(patams: BathubParams, H: jnp.ndarray) -> jnp.ndarray:
+    """Compute outlet flow based on Torricelli's law with non-negative head."""
     H_pos = jnp.maximum(H, 0.0)
     V = jnp.sqrt(2 * patams.g * H_pos)
     Q = patams.C * V
     return Q
 
 def _deriv(params: BathubParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray) -> jnp.ndarray:
+    """Continuous-time head dynamics given inflow ``u`` and disturbance ``d``."""
     (H,) = state
     U = jnp.clip(u[0], params.Umin, params.Umax)
     Q = _outflow(params, H)
@@ -33,6 +38,15 @@ def _deriv(params: BathubParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndar
     return jnp.array([dH], dtype=state.dtype)
 
 class BathubPlant(PlantBase):
+    """Discrete-time bathtub plant with selectable integrator and outputs.
+
+    Args:
+        params (BathubParams): Tank parameters.
+        dt (float, optional): Integration step in seconds. Defaults to 1.0.
+        integrator (Literal['rk4','euler'], optional): Numerical scheme. Defaults to 'rk4'.
+        output (Literal['H','full'], optional): Output view of the state. Defaults to 'H'.
+        dtype (jnp.dtype, optional): JAX dtype used internally. Defaults to jnp.float32.
+    """
     def __init__(
             self,
             params: BathubParams,
@@ -48,6 +62,7 @@ class BathubPlant(PlantBase):
         self.dtype = dtype
 
     def reset(self, state0: Union[float, Tuple[float]]) -> jnp.ndarray:
+        """Return the initial head state as a 1-element array."""
 
         if isinstance(state0, tuple):
             state0 = state0[0]
@@ -55,6 +70,7 @@ class BathubPlant(PlantBase):
         return state
     
     def output(self, state: jnp.ndarray) -> jnp.ndarray:
+        """Select head-only or full state output."""
         return {
             "H": state[0:1],
             "full": state,
@@ -66,6 +82,7 @@ class BathubPlant(PlantBase):
             u: jnp.ndarray,
             d: Union[jnp.ndarray, float] = 0.0,
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        """Advance one discrete step and return `(next_state, output)`."""
         u = jnp.array(u, dtype=self.dtype)
         d = jnp.array(d, dtype=self.dtype)
 
