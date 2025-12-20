@@ -2,7 +2,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
+import jax
 import jax.numpy as jnp
+from jax.tree_util import register_pytree_node
 
 from .base_controller import ControllerBase
 
@@ -14,6 +16,19 @@ class PIDState:
     """State container for PID controller."""
     e_init: Array
     e_prev: Array
+    
+    def tree_flatten(self):
+        """Flatten for JAX PyTree."""
+        return ((self.e_init, self.e_prev), None)
+    
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        """Unflatten for JAX PyTree."""
+        return cls(*children)
+
+
+# Register as JAX PyTree
+register_pytree_node(PIDState, PIDState.tree_flatten, PIDState.tree_unflatten)
 
 
 class PIDController(ControllerBase):

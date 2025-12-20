@@ -5,12 +5,13 @@ from dataclasses import dataclass
 from typing import Literal, Tuple, Union
 
 import jax.numpy as jnp
+from jax.tree_util import register_pytree_node
 
 from .base import PlantBase
 from ..utils import euler_step, rk4_step
 
 @dataclass(frozen=True)
-class BathubParams:
+class BathtubParams:
     """Geometric and hydraulic parameters for the bathtub tank."""
     A: float = 1.0 
     C: float = 0.5
@@ -20,16 +21,31 @@ class BathubParams:
     Umax: float = 0.05
 
     Hmin: float = 0.0
+    
+    def tree_flatten(self):
+        """Flatten for JAX PyTree."""
+        values = (self.A, self.C, self.g, self.Umin, self.Umax, self.Hmin)
+        keys = ('A', 'C', 'g', 'Umin', 'Umax', 'Hmin')
+        return (values, keys)
+    
+    @classmethod
+    def tree_unflatten(cls, keys, values):
+        """Unflatten for JAX PyTree."""
+        return cls(**dict(zip(keys, values)))
 
 
-def _outflow(patams: BathubParams, H: jnp.ndarray) -> jnp.ndarray:
+# Register as JAX PyTree
+register_pytree_node(BathtubParams, BathtubParams.tree_flatten, BathtubParams.tree_unflatten)
+
+
+def _outflow(patams: BathtubParams, H: jnp.ndarray) -> jnp.ndarray:
     """Compute outlet flow based on Torricelli's law with non-negative head."""
     H_pos = jnp.maximum(H, 0.0)
     V = jnp.sqrt(2 * patams.g * H_pos)
     Q = patams.C * V
     return Q
 
-def _deriv(params: BathubParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray) -> jnp.ndarray:
+def _deriv(params: BathtubParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray) -> jnp.ndarray:
     """Continuous-time head dynamics given inflow ``u`` and disturbance ``d``."""
     (H,) = state
     U = jnp.clip(u[0], params.Umin, params.Umax)
@@ -37,11 +53,11 @@ def _deriv(params: BathubParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndar
     dH = (U - Q + d) / params.A
     return jnp.array([dH], dtype=state.dtype)
 
-class BathubPlant(PlantBase):
+class BathtubPlant(PlantBase):
     """Discrete-time bathtub plant with selectable integrator and outputs.
 
     Args:
-        params (BathubParams): Tank parameters.
+        params (BathtubParams): Tank parameters.
         dt (float, optional): Integration step in seconds. Defaults to 1.0.
         integrator (Literal['rk4','euler'], optional): Numerical scheme. Defaults to 'rk4'.
         output (Literal['H','full'], optional): Output view of the state. Defaults to 'H'.
@@ -49,7 +65,7 @@ class BathubPlant(PlantBase):
     """
     def __init__(
             self,
-            params: BathubParams,
+            params: BathtubParams,
             dt: float = 1.0,
             integrator: Literal['rk4', 'euler'] = 'rk4',
             output: Literal["H", "full"] = "H",

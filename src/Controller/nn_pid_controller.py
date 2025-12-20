@@ -5,6 +5,7 @@ from typing import Callable, List, Literal, Optional, Tuple, Union
 import jax
 import jax.nn as jnn
 import jax.numpy as jnp
+from jax.tree_util import register_pytree_node
 
 from .base_controller import ControllerBase
 
@@ -16,6 +17,19 @@ class NN_PIDState:
     """State container for NN-PID controller."""
     e_init: Array
     e_prev: Array
+    
+    def tree_flatten(self):
+        """Flatten for JAX PyTree."""
+        return ((self.e_init, self.e_prev), None)
+    
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        """Unflatten for JAX PyTree."""
+        return cls(*children)
+
+
+# Register as JAX PyTree
+register_pytree_node(NN_PIDState, NN_PIDState.tree_flatten, NN_PIDState.tree_unflatten)
 
 
 class NNPIDController(ControllerBase):

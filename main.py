@@ -9,12 +9,13 @@ import yaml
 import jax
 import jax.numpy as jnp
 
-from src.plants.bathub import BathubPlant, BathubParams
+from src.plants.bathtub import BathtubPlant, BathtubParams
 from src.plants.cournot import CournotPlant, CournotParams
 from src.plants.dc_motor import DCMotorPlant, DCMotorParams
 from src.Controller.pid_controller import PIDController
 from src.Controller.nn_pid_controller import NNPIDController
 from src.visualization import TrainingVisualizer
+from src.training import train_controller
 
 
 def load_config(config_path: str = "config/management.yaml") -> Dict[str, Any]:
@@ -31,7 +32,7 @@ def create_plant(config: Dict[str, Any]):
     dt = config['simulation']['dt']
     
     if plant_type == 'bathtub':
-        plant_params = BathubParams(
+        plant_params = BathtubParams(
             A=params['A'],
             C=params['C'],
             g=params['g'],
@@ -39,7 +40,7 @@ def create_plant(config: Dict[str, Any]):
             Umax=params['Umax'],
             Hmin=params['Hmin'],
         )
-        plant = BathubPlant(params=plant_params, dt=dt)
+        plant = BathtubPlant(params=plant_params, dt=dt)
         initial_state = plant.reset(params['H0'])
         
     elif plant_type == 'cournot':
@@ -216,31 +217,46 @@ def train(config: Dict[str, Any], verbose: bool = True):
         # Split key for randomness
         key, subkey = jax.random.split(key)
         
-        # Run one epoch
+        # Generate random disturbances for this epoch
+        d_min, d_max = disturbance_range
+        disturbances = jax.random.uniform(
+            subkey, shape=(timesteps,), minval=d_min, maxval=d_max
+        )
+        
+        # Train controller using gradient descent
+        controller, mse = train_controller(
+            controller=controller,
+            plant=plant,
+            plant_state=plant_state,
+            ctrl_state=ctrl_state,
+            reference=reference,
+            timesteps=timesteps,
+            disturbances=disturbances,
+            learning_rate=learning_rate,
+            key=subkey,
+        )
+        
+        # Run one epoch to get outputs for visualization
         errors, outputs, controls, plant_state, ctrl_state = run_epoch(
             plant, controller, plant_state, ctrl_state,
             reference, timesteps, disturbance_range, subkey
         )
         
-        # Compute MSE
-        mse = float(jnp.mean(errors ** 2))
-        
         # Record metrics
         if config['controller']['type'] == 'classic' and isinstance(controller, PIDController):
             kp, ki, kd = float(controller.theta[0]), float(controller.theta[1]), float(controller.theta[2])
             viz.record_epoch(epoch, errors, kp=kp, ki=ki, kd=kd)
-            
-            # Simple gradient-based parameter update (optional - basic tuning)
-            # This is a simplified version; you can implement proper gradient descent
-            # For now, we'll keep parameters fixed as specified in config
-            
         else:  # AI controller
             viz.record_epoch(epoch, errors)
-            # Here you would implement neural network training
-            # using JAX autograd to compute gradients and update params
         
         if verbose and (epoch % 10 == 0 or epoch == epochs - 1):
-            print(f"Epoch {epoch:3d} | MSE: {mse:.6f} | Final output: {outputs[-1]:.4f}")
+            if isinstance(controller, PIDController):
+                kp, ki, kd = controller.theta[0], controller.theta[1], controller.theta[2]
+                avg_control = jnp.mean(controls)
+                max_control = jnp.max(controls)
+                print(f"Epoch {epoch:3d} | MSE: {mse:.6f} | Final H: {outputs[-1]:.4f} | Avg U: {avg_control:.4f} | Max U: {max_control:.4f} | Kp: {kp:.4f}, Ki: {ki:.4f}, Kd: {kd:.4f}")
+            else:
+                print(f"Epoch {epoch:3d} | MSE: {mse:.6f} | Final output: {outputs[-1]:.4f}")
     
     if verbose:
         print("-" * 60)
