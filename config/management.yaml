@@ -31,7 +31,7 @@ plant:
       state0: [0.0, 0.0, 0.0]  
 
 controller:
-  type: classic
+  type: ai
   classic_pid:
     kp: 0.08              # Larger gains now that problem is feasible
     ki: 0.005

@@ -303,10 +303,14 @@ def main():
     
     # Generate plots if requested
     if args.plot:
-        output_dir = Path(args.output_dir)
-        output_dir.mkdir(exist_ok=True)
+        # Create organized folder structure: results/plant_type/controller_type/
+        plant_type = config['plant']['type']
+        controller_type = config['controller']['type']
         
-        print("\nGenerating plots...")
+        output_dir = Path(args.output_dir) / plant_type / controller_type
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"\nGenerating plots in: {output_dir}")
         
         # Learning progression plot (always)
         viz.plot_learning_progression(
@@ -315,7 +319,7 @@ def main():
         print(f"  Saved: {output_dir / 'learning_progression.png'}")
         
         # PID parameters plot (only for classic controller)
-        if config['controller']['type'] == 'classic':
+        if controller_type == 'classic':
             viz.plot_pid_parameters(
                 save_path=str(output_dir / "pid_parameters.png")
             )
