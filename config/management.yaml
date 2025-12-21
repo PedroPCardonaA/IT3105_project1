@@ -43,16 +43,16 @@ controller:
     u_min: -12.0          # Match motor Vmax
     u_max: 12.0           
   ai:
-    hidden_layer_sizes: [64, 32]   
-    activations: [relu, tanh]      
-    weight_init_range: [-0.1, 0.1] 
-    bias_init_range: [-0.01, 0.01] 
+    hidden_layer_sizes: [16, 8]    # Smaller network for testing
+    activations: [tanh, tanh]       # Tanh for all layers
+    weight_init_range: [-0.5, 0.5]  # Larger initial weights
+    bias_init_range: [-0.1, 0.1]    # Larger initial biases
     output_activation: linear      
 
 training:
   epochs: 50                      # Moderate epochs for DC motor
   timesteps_per_epoch: 200        # Full simulation length
-  learning_rate: 0.01             # Good starting point for NN             
+  learning_rate: 0.1              # Higher learning rate for Cournot             
 
 simulation:
   dt: 0.01                         

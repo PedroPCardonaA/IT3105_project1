@@ -81,6 +81,12 @@ def create_controller(config: Dict[str, Any], key: Optional[jax.Array] = None):
     """Create controller instance from configuration."""
     controller_type = config['controller']['type']
     dt = config['simulation']['dt']
+    plant_type = config['plant']['type']
+    plant_params = config['plant']['params'][plant_type]
+    
+    # Get plant-specific control limits
+    u_min = plant_params.get('Umin')
+    u_max = plant_params.get('Umax')
     
     if controller_type == 'classic':
         params = config['controller']['classic_pid']
@@ -90,8 +96,8 @@ def create_controller(config: Dict[str, Any], key: Optional[jax.Array] = None):
             kd=params['kd'],
             dt=dt,
             i_limit=params.get('i_limit'),
-            u_min=params.get('u_min'),
-            u_max=params.get('u_max'),
+            u_min=params.get('u_min', u_min),  # Use plant limits if not specified
+            u_max=params.get('u_max', u_max),
         )
         initial_ctrl_state = controller.reset()
         
@@ -114,6 +120,9 @@ def create_controller(config: Dict[str, Any], key: Optional[jax.Array] = None):
             dt=dt,
             w_init_range=tuple(params['weight_init_range']),
             b_init_range=tuple(params['bias_init_range']),
+            u_min=params.get('u_min', u_min),  # Use plant limits
+            u_max=params.get('u_max', u_max),
+            i_limit=params.get('i_limit', 5.0),
             key=key,
         )
         initial_ctrl_state = controller.reset()
