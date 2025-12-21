@@ -34,7 +34,7 @@ plant:
       reference: 10.0      # Target angular velocity (rad/s)  
 
 controller:
-  type: classic
+  type: ai
   classic_pid:
     kp: 0.5               # Initial gain for DC motor
     ki: 0.01
@@ -50,9 +50,9 @@ controller:
     output_activation: linear      
 
 training:
-  epochs: 50                      # Reduced for faster testing
-  timesteps_per_epoch: 200         
-  learning_rate: 0.1              # Much larger for DC motor             
+  epochs: 50                      # Moderate epochs for DC motor
+  timesteps_per_epoch: 200        # Full simulation length
+  learning_rate: 0.01             # Good starting point for NN             
 
 simulation:
   dt: 0.01                         

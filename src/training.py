@@ -235,9 +235,10 @@ def create_nn_pid_loss_function(
     u_min: Union[float, None],
     u_max: Union[float, None],
     key: Array,
+    dtype=jnp.float32,
 ) -> Callable[[list], Array]:
     """
-    Create a loss function for NN-PID controller that takes params as input.
+    Create an optimized loss function for NN-PID controller using lax.scan.
     
     Args:
         plant: Plant instance
@@ -252,45 +253,58 @@ def create_nn_pid_loss_function(
         u_min: Minimum control output
         u_max: Maximum control output
         key: Random key for initialization
+        dtype: JAX dtype
     
     Returns:
         A function that takes neural network params and returns MSE loss
     """
     def loss_fn(params: list) -> Array:
-        # Create temporary controller with current params
-        # We need to infer layer sizes from params
-        layer_sizes = [params[0]['W'].shape[0]]  # Input size
-        for p in params:
-            layer_sizes.append(p['W'].shape[1])
+        # Define step function for lax.scan
+        def nn_pid_step(carry, inputs):
+            plant_st, ctrl_st = carry
+            disturbance, params_i = inputs
+            
+            # Get output using plant's output method
+            y = plant.output(plant_st)
+            
+            # Compute error
+            y_ref = jnp.array([reference], dtype=dtype)
+            error = y_ref - y
+            
+            # NN-PID control using static method
+            next_ctrl_st, u = NNPIDController.compute_control(
+                nn_params=params_i,
+                state=ctrl_st,
+                e=error,
+                dt=dt,
+                hidden_activation=hidden_activation,
+                u_min=u_min,
+                u_max=u_max,
+                i_limit=i_limit,
+                dtype=dtype,
+            )
+            
+            # Use plant's step method (plant-agnostic)
+            next_plant_st, _ = plant.step(plant_st, u, disturbance)
+            
+            return (next_plant_st, next_ctrl_st), error
         
-        temp_controller = NNPIDController(
-            layer_sizes=tuple(layer_sizes),
-            hidden_activation=hidden_activation,
-            dt=dt,
-            u_min=u_min,
-            u_max=u_max,
-            i_limit=i_limit,
-            key=key,
+        # Broadcast params to all timesteps (needed for scan)
+        # Convert params list to a structure that can be broadcast
+        params_broadcast = jax.tree_util.tree_map(
+            lambda x: jnp.tile(x[None, ...], (timesteps,) + (1,) * x.ndim),
+            params
         )
-        # Replace initialized params with provided params
-        temp_controller.params = params
         
-        # Run epoch with this controller
-        errors, _, _ = run_epoch_for_loss(
-            plant=plant,
-            controller=temp_controller,
-            plant_state=plant_state,
-            ctrl_state=ctrl_state,
-            reference=reference,
-            timesteps=timesteps,
-            disturbances=disturbances,
-        )
+        inputs = (disturbances, params_broadcast)
         
-        # Return MSE loss
-        return compute_mse_loss(errors)
+        # Run scan over all timesteps
+        _, errors = lax.scan(nn_pid_step, (plant_state, ctrl_state), inputs)
+        
+        # Compute and return MSE loss
+        return compute_mse_loss(errors.squeeze())
     
-    # JIT compile for faster execution
-    return jax.jit(loss_fn)
+    return loss_fn
 
 
 def update_nn_pid_controller(
@@ -335,6 +349,7 @@ def update_nn_pid_controller(
         u_min=controller.u_min,
         u_max=controller.u_max,
         key=key,
+        dtype=controller.dtype,
     )
     
     # Compute loss and gradient
