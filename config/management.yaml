@@ -1,5 +1,5 @@
 plant:
-  type: dc_motor
+  type: cournot
   params:
     bathtub:
       A: 1.0               
