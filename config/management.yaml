@@ -1,5 +1,5 @@
 plant:
-  type: bathtub
+  type: cournot
   params:
     bathtub:
       A: 1.0               
@@ -17,7 +17,7 @@ plant:
       qmax: 1.0            
       Umin: -0.05          
       Umax: 0.05           
-      q0: [0.0, 0.0]
+      q0: [0.3, 0.3]       # Start at non-zero quantities for better gradients
       reference: 50.0      # Target profit or quantity      
     dc_motor:
       R: 2.0               
@@ -34,7 +34,7 @@ plant:
       reference: 10.0      # Target angular velocity (rad/s)  
 
 controller:
-  type: classic
+  type: ai
   classic_pid:
     kp: 0.5               # Initial gain for DC motor
     ki: 0.01
@@ -46,13 +46,13 @@ controller:
     hidden_layer_sizes: [16, 8]    # Smaller network for testing
     activations: [tanh, tanh]       # Tanh for all layers
     weight_init_range: [-0.5, 0.5]  # Larger initial weights
-    bias_init_range: [-0.1, 0.1]    # Larger initial biases
+    bias_init_range: [0.0, 0.2]     # Positive bias to encourage positive outputs
     output_activation: linear      
 
 training:
-  epochs: 50                      # Moderate epochs for DC motor
+  epochs: 20                      # Fewer epochs for testing
   timesteps_per_epoch: 200        # Full simulation length
-  learning_rate: 0.1              # Higher learning rate for Cournot             
+  learning_rate: 0.5              # Moderate learning rate             
 
 simulation:
   dt: 0.01                         
