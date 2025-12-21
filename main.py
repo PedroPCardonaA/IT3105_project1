@@ -68,7 +68,7 @@ def create_plant(config: Dict[str, Any]):
             tau1=params['tau1'],
             Vmax=params['Vmax'],
         )
-        plant = DCMotorPlant(params=plant_params, dt=dt)
+        plant = DCMotorPlant(params=plant_params, dt=dt, output='omega')
         initial_state = plant.reset(tuple(params['state0']))
         
     else:
@@ -192,16 +192,9 @@ def train(config: Dict[str, Any], verbose: bool = True):
     learning_rate = config['training']['learning_rate']
     disturbance_range = tuple(config['simulation']['disturbance_range'])
     
-    # Reference setpoint (you can make this configurable)
+    # Reference setpoint from config
     plant_type = config['plant']['type']
-    if plant_type == 'bathtub':
-        reference = 0.5  # Target water height
-    elif plant_type == 'cournot':
-        reference = 50.0  # Target profit or quantity
-    elif plant_type == 'dc_motor':
-        reference = 1.0  # Target angular velocity
-    else:
-        reference = 1.0
+    reference = config['plant']['params'][plant_type].get('reference', 1.0)
     
     # Visualization
     viz = TrainingVisualizer()

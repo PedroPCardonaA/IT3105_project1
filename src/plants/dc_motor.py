@@ -35,13 +35,14 @@ class DCMotorParams:
 
 def _deriv(params: DCMotorParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray) -> jnp.ndarray:
     """Compute continuous-time state derivatives for the DC motor dynamics."""
-    i, omega, theta = state
+    i, omega, theta = state[0], state[1], state[2]
 
     V = jnp.clip(u[0], -params.Vmax, params.Vmax)
+    
     di = (-params.R * i - params.Ke * omega + V) / params.L
     tau_f = params.tau_c * jnp.tanh(omega / params.omega_s)
     tau_load = params.tau1 * jnp.sin(theta)
-    domega = (params.Kt * i - params.b * omega - tau_f - tau_load - d)/ params.J
+    domega = (params.Kt * i - params.b * omega - tau_f - tau_load - d) / params.J
     dtheta = omega
 
     return jnp.array([di, domega, dtheta], dtype=state.dtype)

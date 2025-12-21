@@ -1,5 +1,5 @@
 plant:
-  type: bathtub
+  type: dc_motor
   params:
     bathtub:
       A: 1.0               
@@ -8,7 +8,8 @@ plant:
       H0: 0.2              
       Hmin: 0.0            
       Umin: 0.0            
-      Umax: 0.05          
+      Umax: 0.05
+      reference: 0.5       # Target water height          
     cournot:
       pmax: 100.0          
       cm: 20.0             
@@ -16,7 +17,8 @@ plant:
       qmax: 1.0            
       Umin: -0.05          
       Umax: 0.05           
-      q0: [0.0, 0.0]      
+      q0: [0.0, 0.0]
+      reference: 50.0      # Target profit or quantity      
     dc_motor:
       R: 2.0               
       L: 0.5               
@@ -28,17 +30,18 @@ plant:
       omega_s: 0.1         
       tau1: 0.05           
       Vmax: 12.0           
-      state0: [0.0, 0.0, 0.0]  
+      state0: [0.0, 0.0, 0.0]
+      reference: 10.0      # Target angular velocity (rad/s)  
 
 controller:
-  type: ai
+  type: classic
   classic_pid:
-    kp: 0.08              # Larger gains now that problem is feasible
-    ki: 0.005
-    kd: 0.005             
-    i_limit: 1.0          
-    u_min: null            
-    u_max: null           
+    kp: 0.5               # Initial gain for DC motor
+    ki: 0.01
+    kd: 0.01             
+    i_limit: 5.0          
+    u_min: -12.0          # Match motor Vmax
+    u_max: 12.0           
   ai:
     hidden_layer_sizes: [64, 32]   
     activations: [relu, tanh]      
@@ -47,9 +50,9 @@ controller:
     output_activation: linear      
 
 training:
-  epochs: 50                      # More epochs to see convergence
+  epochs: 50                      # Reduced for faster testing
   timesteps_per_epoch: 200         
-  learning_rate: 0.01             
+  learning_rate: 0.1              # Much larger for DC motor             
 
 simulation:
   dt: 0.01                         

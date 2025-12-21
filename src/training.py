@@ -151,29 +151,17 @@ def update_pid_controller(
 ) -> Tuple[PIDController, float]:
     """
     Update PID controller parameters using gradient descent.
+    
+    This function uses the plant's step method directly, making it plant-agnostic.
     """
-    # Import pure plant functions to avoid instance method calls
-    from .plants.bathtub import _deriv as bathub_deriv
-    from .utils import rk4_step, euler_step
-    
-    # Extract plant configuration  
-    plant_params = plant.params
-    plant_dt = plant.dt
-    plant_integrator = plant.integrator
-    plant_output_mode = plant.output_mode
-    plant_dtype = plant.dtype
-    
-    # Create a pure loss function with NO closures over plant instance
+    # Create a pure loss function
     def loss_fn(theta: Array) -> Array:
         def pid_step(carry, inputs):
             plant_st, ctrl_st = carry
             disturbance, theta_i = inputs
             
-            # Pure output computation (no method call)
-            if plant_output_mode == "H":
-                y = plant_st[0:1]
-            else:
-                y = plant_st
+            # Get output using plant's output method
+            y = plant.output(plant_st)
             
             # Compute error
             y_ref = jnp.array([reference], dtype=controller.dtype)
@@ -191,17 +179,8 @@ def update_pid_controller(
                 dtype=controller.dtype,
             )
             
-            # Pure plant step (no method call)
-            u_typed = jnp.array(u, dtype=plant_dtype)
-            d_typed = jnp.array(disturbance, dtype=plant_dtype)
-            
-            if plant_integrator == "rk4":
-                next_plant_st = rk4_step(bathub_deriv, plant_params, plant_st, u_typed, d_typed, plant_dt)
-            else:
-                next_plant_st = euler_step(bathub_deriv, plant_params, plant_st, u_typed, d_typed, plant_dt)
-            
-            # Enforce minimum height
-            next_plant_st = next_plant_st.at[0].set(jnp.maximum(next_plant_st[0], plant_params.Hmin))
+            # Use plant's step method (plant-agnostic)
+            next_plant_st, _ = plant.step(plant_st, u, disturbance)
             
             return (next_plant_st, next_ctrl_st), error
         
@@ -214,23 +193,10 @@ def update_pid_controller(
         
         return compute_mse_loss(errors.squeeze())
     
-    # Compute loss and gradient using finite differences (autodiff has issues)
-    def compute_finite_diff_gradients(theta, eps=1e-5):
-        """Compute gradients using finite differences."""
-        loss_fn_scalar = lambda t: float(loss_fn(t))
-        base_loss = loss_fn_scalar(theta)
-        grads = []
-        
-        for i in range(len(theta)):
-            theta_plus = theta.at[i].set(theta[i] + eps)
-            loss_plus = loss_fn_scalar(theta_plus)
-            grad_i = (loss_plus - base_loss) / eps
-            grads.append(grad_i)
-        
-        return jnp.array(grads)
-    
+    # Compute loss and gradient using JAX autodiff
     loss_value = loss_fn(controller.theta)
-    grads = compute_finite_diff_gradients(controller.theta)
+    grad_fn = jax.grad(loss_fn)
+    grads = grad_fn(controller.theta)
     
     # Check for NaN/Inf in gradients
     if jnp.any(jnp.isnan(grads)) or jnp.any(jnp.isinf(grads)):
