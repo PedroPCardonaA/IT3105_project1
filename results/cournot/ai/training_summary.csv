@@ -1,0 +1,5 @@
+Metric,Value
+total_epochs,50
+final_mse,2500.0
+best_mse,2500.0
+average_mse,2500.0

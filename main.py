@@ -16,6 +16,7 @@ from src.Controller.pid_controller import PIDController
 from src.Controller.nn_pid_controller import NNPIDController
 from src.visualization import TrainingVisualizer
 from src.training import train_controller
+from src.results_exporter import ResultsExporter
 
 
 def load_config(config_path: str = "config/management.yaml") -> Dict[str, Any]:
@@ -205,8 +206,10 @@ def train(config: Dict[str, Any], verbose: bool = True):
     plant_type = config['plant']['type']
     reference = config['plant']['params'][plant_type].get('reference', 1.0)
     
-    # Visualization
+    # Visualization and results export
     viz = TrainingVisualizer()
+    exporter = ResultsExporter()
+    exporter.set_configuration(config)
     
     if verbose:
         print(f"Starting training with {plant_type} plant and {config['controller']['type']} controller")
@@ -248,8 +251,25 @@ def train(config: Dict[str, Any], verbose: bool = True):
         if config['controller']['type'] == 'classic' and isinstance(controller, PIDController):
             kp, ki, kd = float(controller.theta[0]), float(controller.theta[1]), float(controller.theta[2])
             viz.record_epoch(epoch, errors, kp=kp, ki=ki, kd=kd)
+            avg_control = float(jnp.mean(controls))
+            max_control = float(jnp.max(controls))
+            exporter.add_epoch_result(
+                epoch=epoch,
+                mse=float(mse),
+                final_output=float(outputs[-1]),
+                avg_control=avg_control,
+                max_control=max_control,
+                kp=kp,
+                ki=ki,
+                kd=kd,
+            )
         else:  # AI controller
             viz.record_epoch(epoch, errors)
+            exporter.add_epoch_result(
+                epoch=epoch,
+                mse=float(mse),
+                final_output=float(outputs[-1]),
+            )
         
         if verbose and (epoch % 10 == 0 or epoch == epochs - 1):
             if isinstance(controller, PIDController):
@@ -271,7 +291,7 @@ def train(config: Dict[str, Any], verbose: bool = True):
         if config['controller']['type'] == 'classic':
             print(f"  Final PID gains: Kp={summary['final_kp']:.4f}, Ki={summary['final_ki']:.4f}, Kd={summary['final_kd']:.4f}")
     
-    return viz, plant, controller, plant_state, ctrl_state
+    return viz, exporter, plant, controller, plant_state, ctrl_state
 
 
 def main():
@@ -301,18 +321,27 @@ def main():
     config = load_config(args.config)
     
     # Run training
-    viz, plant, controller, final_plant_state, final_ctrl_state = train(config, verbose=True)
+    viz, exporter, plant, controller, final_plant_state, final_ctrl_state = train(config, verbose=True)
+    
+    # Get summary for CSV export
+    summary = viz.get_summary()
+    
+    # Create output directory structure
+    plant_type = config['plant']['type']
+    controller_type = config['controller']['type']
+    output_dir = Path(args.output_dir) / plant_type / controller_type
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Export CSV results (always)
+    print(f"\nExporting results to: {output_dir}")
+    exporter.export_all(output_dir, summary=summary)
+    print(f"  Saved: {output_dir / 'configuration.csv'}")
+    print(f"  Saved: {output_dir / 'training_results.csv'}")
+    print(f"  Saved: {output_dir / 'training_summary.csv'}")
     
     # Generate plots if requested
     if args.plot:
-        # Create organized folder structure: results/plant_type/controller_type/
-        plant_type = config['plant']['type']
-        controller_type = config['controller']['type']
-        
-        output_dir = Path(args.output_dir) / plant_type / controller_type
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        print(f"\nGenerating plots in: {output_dir}")
+        print(f"\nGenerating plots...")
         
         # Learning progression plot (always)
         viz.plot_learning_progression(
@@ -332,8 +361,8 @@ def main():
                 save_path=str(output_dir / "training_summary.png")
             )
             print(f"  Saved: {output_dir / 'training_summary.png'}")
-        
-        print("Done!")
+    
+    print("\nDone!")
 
 
 if __name__ == "__main__":

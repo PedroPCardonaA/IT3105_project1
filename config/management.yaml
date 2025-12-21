@@ -1,5 +1,5 @@
 plant:
-  type: cournot
+  type: bathtub
   params:
     bathtub:
       A: 1.0               
@@ -34,7 +34,7 @@ plant:
       reference: 10.0      # Target angular velocity (rad/s)  
 
 controller:
-  type: ai
+  type: classic
   classic_pid:
     kp: 0.5               # Initial gain for DC motor
     ki: 0.01
