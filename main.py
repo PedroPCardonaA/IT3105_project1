@@ -248,6 +248,8 @@ def train(config: Dict[str, Any], verbose: bool = True):
         )
         
         # Record metrics
+        ground_truth = jnp.full_like(outputs, reference)  # Reference is constant for all timesteps
+        
         if config['controller']['type'] == 'classic' and isinstance(controller, PIDController):
             kp, ki, kd = float(controller.theta[0]), float(controller.theta[1]), float(controller.theta[2])
             viz.record_epoch(epoch, errors, kp=kp, ki=ki, kd=kd)
@@ -257,6 +259,8 @@ def train(config: Dict[str, Any], verbose: bool = True):
                 epoch=epoch,
                 mse=float(mse),
                 final_output=float(outputs[-1]),
+                predictions=outputs,
+                ground_truth=ground_truth,
                 avg_control=avg_control,
                 max_control=max_control,
                 kp=kp,
@@ -269,6 +273,8 @@ def train(config: Dict[str, Any], verbose: bool = True):
                 epoch=epoch,
                 mse=float(mse),
                 final_output=float(outputs[-1]),
+                predictions=outputs,
+                ground_truth=ground_truth,
             )
         
         if verbose and (epoch % 10 == 0 or epoch == epochs - 1):

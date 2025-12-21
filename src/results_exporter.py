@@ -61,6 +61,8 @@ class ResultsExporter:
         epoch: int,
         mse: float,
         final_output: float,
+        predictions: Optional[Any] = None,
+        ground_truth: Optional[Any] = None,
         avg_control: Optional[float] = None,
         max_control: Optional[float] = None,
         kp: Optional[float] = None,
@@ -74,6 +76,8 @@ class ResultsExporter:
             epoch: Epoch number
             mse: Mean squared error
             final_output: Final plant output value
+            predictions: Array of predicted outputs (optional)
+            ground_truth: Array of ground truth reference values (optional)
             avg_control: Average control signal (optional)
             max_control: Maximum control signal (optional)
             kp: PID proportional gain (optional, for classic PID)
@@ -86,6 +90,16 @@ class ResultsExporter:
             'mse': float(mse),
             'final_output': float(final_output),
         }
+        
+        # Store predictions and ground truth as comma-separated strings
+        if predictions is not None:
+            # Convert to list and then to comma-separated string
+            pred_list = [float(v) for v in predictions]
+            result['predictions'] = ','.join([f'{v:.6f}' for v in pred_list])
+        if ground_truth is not None:
+            # Convert to list and then to comma-separated string
+            gt_list = [float(v) for v in ground_truth]
+            result['ground_truth'] = ','.join([f'{v:.6f}' for v in gt_list])
         
         if avg_control is not None:
             result['avg_control'] = float(avg_control)
