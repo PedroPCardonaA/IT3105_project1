@@ -1,24 +1,24 @@
 Parameter,Value
-timestamp,2025-12-21 15:16:05
+timestamp,2025-12-21 16:12:48
 plant_type,bathtub
 controller_type,classic
 dt,0.01
-epochs,50
+epochs,3
 timesteps_per_epoch,200
-learning_rate,0.1
+learning_rate,0.01
 disturbance_min,-0.01
 disturbance_max,0.01
 plant_A,1.0
 plant_C,0.016
-plant_g,9.81
 plant_H0,0.2
 plant_Hmin,0.0
-plant_Umin,0.0
 plant_Umax,0.05
-plant_reference,0.5
-controller_kp,0.5
-controller_ki,0.01
-controller_kd,0.01
+plant_Umin,0.0
+plant_g,9.81
+plant_reference,0.75
 controller_i_limit,5.0
-controller_u_min,-12.0
+controller_kd,0.01
+controller_ki,0.01
+controller_kp,0.5
 controller_u_max,12.0
+controller_u_min,-12.0

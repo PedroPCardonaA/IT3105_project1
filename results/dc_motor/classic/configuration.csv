@@ -1,0 +1,28 @@
+Parameter,Value
+timestamp,2025-12-22 16:52:38
+plant_type,dc_motor
+controller_type,classic
+dt,0.01
+epochs,100
+timesteps_per_epoch,200
+learning_rate,0.01
+disturbance_min,-0.01
+disturbance_max,0.01
+plant_R,2.0
+plant_L,0.5
+plant_Ke,0.1
+plant_Kt,0.1
+plant_J,0.02
+plant_b,0.001
+plant_tau_c,0.02
+plant_omega_s,0.1
+plant_tau1,0.05
+plant_Vmax,12.0
+plant_state0,"[0.0, 0.0, 0.0]"
+plant_reference,35.0
+controller_kp,0.5
+controller_ki,0.01
+controller_kd,0.01
+controller_i_limit,5.0
+controller_u_min,-12.0
+controller_u_max,12.0

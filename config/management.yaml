@@ -1,15 +1,15 @@
 plant:
-  type: cournot
+  type: bathtub
   params:
     bathtub:
       A: 1.0               
-      C: 0.016             # Set so equilibrium at H=0.5 requires U=0.05
+      C: 0.012             # Reduced discharge coefficient to allow higher water levels
       g: 9.81             
       H0: 0.2              
       Hmin: 0.0            
       Umin: 0.0            
       Umax: 0.05
-      reference: 0.5       # Target water height          
+      reference: 0.7     # Target water height (now supports up to ~0.88m)          
     cournot:
       pmax: 100.0          
       cm: 20.0             
@@ -17,8 +17,8 @@ plant:
       qmax: 1.0            
       Umin: -0.05          
       Umax: 0.05           
-      q0: [0.3, 0.3]       # Start at non-zero quantities for better gradients
-      reference: 50.0      # Target profit or quantity      
+      q0: [0.3, 0.3]       
+      reference: 75.0      # Target profit or quantity      
     dc_motor:
       R: 2.0               
       L: 0.5               
@@ -31,28 +31,28 @@ plant:
       tau1: 0.05           
       Vmax: 12.0           
       state0: [0.0, 0.0, 0.0]
-      reference: 10.0      # Target angular velocity (rad/s)  
+      reference: 35.0      # Target angular velocity (rad/s)  
 
 controller:
-  type: ai
+  type: classic
   classic_pid:
-    kp: 0.5               # Initial gain for DC motor
+    kp: 0.5               
     ki: 0.01
     kd: 0.01             
     i_limit: 5.0          
-    u_min: -12.0          # Match motor Vmax
+    u_min: -12.0          
     u_max: 12.0           
   ai:
-    hidden_layer_sizes: [16, 8]    # Smaller network for testing
-    activations: [tanh, tanh]       # Tanh for all layers
-    weight_init_range: [-0.5, 0.5]  # Larger initial weights
-    bias_init_range: [0.0, 0.2]     # Positive bias to encourage positive outputs
+    hidden_layer_sizes: [16, 8]    
+    activations: [tanh, tanh]      
+    weight_init_range: [-0.5, 0.5]  
+    bias_init_range: [0.0, 0.2]     
     output_activation: linear      
 
 training:
-  epochs: 20                      # Fewer epochs for testing
-  timesteps_per_epoch: 200        # Full simulation length
-  learning_rate: 0.5              # Moderate learning rate             
+  epochs: 100                      
+  timesteps_per_epoch: 200       
+  learning_rate: 0.01                      
 
 simulation:
   dt: 0.01                         
