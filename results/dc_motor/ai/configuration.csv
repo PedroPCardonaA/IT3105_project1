@@ -1,7 +1,7 @@
 Parameter,Value
-timestamp,2025-12-22 17:06:11
+timestamp,2025-12-22 17:06:38
 plant_type,dc_motor
-controller_type,classic
+controller_type,ai
 dt,0.01
 epochs,30
 timesteps_per_epoch,200
@@ -20,9 +20,8 @@ plant_tau1,0.05
 plant_Vmax,12.0
 plant_state0,"[0.0, 0.0, 0.0]"
 plant_reference,35.0
-controller_kp,0.5
-controller_ki,0.01
-controller_kd,0.01
-controller_i_limit,5.0
-controller_u_min,-12.0
-controller_u_max,12.0
+controller_hidden_layer_sizes,"[16, 8]"
+controller_activations,"['tanh', 'tanh']"
+controller_weight_init_range,"[-0.5, 0.5]"
+controller_bias_init_range,"[0.0, 0.2]"
+controller_output_activation,linear

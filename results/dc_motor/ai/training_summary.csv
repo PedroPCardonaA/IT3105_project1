@@ -1,0 +1,5 @@
+Metric,Value
+total_epochs,30
+final_mse,0.00278668524697423
+best_mse,0.002676718169823289
+average_mse,52.31248909355296
