@@ -1,5 +1,5 @@
 plant:
-  type: dc_motor
+  type: cournot
   params:
     bathtub:
       A: 1.0               
@@ -15,8 +15,8 @@ plant:
       cm: 20.0             
       qmin: 0.0            
       qmax: 1.0            
-      Umin: -0.05          
-      Umax: 0.05           
+      Umin: -0.5           
+      Umax: 0.5            
       q0: [0.3, 0.3]       
       reference: 75.0      # Target profit or quantity      
     dc_motor:
@@ -36,9 +36,9 @@ plant:
 controller:
   type: ai
   classic_pid:
-    kp: 0.5               
-    ki: 0.01
-    kd: 0.01             
+    kp: 0.8               
+    ki: 0.07
+    kd: 0.03          
     i_limit: 5.0          
     u_min: -12.0          
     u_max: 12.0           

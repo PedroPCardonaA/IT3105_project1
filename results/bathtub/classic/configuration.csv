@@ -1,5 +1,5 @@
 Parameter,Value
-timestamp,2025-12-22 17:04:35
+timestamp,2025-12-22 17:21:37
 plant_type,bathtub
 controller_type,classic
 dt,0.01
@@ -16,9 +16,9 @@ plant_Hmin,0.0
 plant_Umin,0.0
 plant_Umax,0.05
 plant_reference,0.7
-controller_kp,0.5
-controller_ki,0.01
-controller_kd,0.01
+controller_kp,0.8
+controller_ki,0.07
+controller_kd,0.03
 controller_i_limit,5.0
 controller_u_min,-12.0
 controller_u_max,12.0

@@ -29,9 +29,17 @@ def _profit_and_price(params: CournotParams, q1: jnp.ndarray, q2: jnp.ndarray) -
     return P1, p
 
 def _deriv(params: CournotParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.ndarray) -> jnp.ndarray:
+    """Compute derivative for controlled firm's quantity q1.
+    
+    The state is [q1, q2] but only q1 is controlled.
+    q2 (competitor) changes due to disturbance d.
+    """
+    q1, q2 = state
     U = jnp.clip(u[0], params.Umin, params.Umax)
     D = d
-    return jnp.array([U - D], dtype=state.dtype)
+    dq1 = U  # Firm 1 (controlled) rate of change
+    dq2 = -D  # Firm 2 (competitor) affected by disturbance
+    return jnp.array([dq1, dq2], dtype=state.dtype)
 
 class CournotPlant(PlantBase):
     """Discrete-time Cournot competition plant with selectable integrator and outputs.
