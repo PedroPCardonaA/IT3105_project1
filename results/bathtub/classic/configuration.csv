@@ -1,10 +1,10 @@
 Parameter,Value
-timestamp,2025-12-22 17:47:41
+timestamp,2025-12-23 18:53:35
 plant_type,bathtub
 controller_type,classic
 dt,0.01
-epochs,30
-timesteps_per_epoch,200
+epochs,50
+timesteps_per_epoch,50
 learning_rate,0.01
 disturbance_min,-0.01
 disturbance_max,0.01

@@ -38,7 +38,7 @@ def _deriv(params: CournotParams, state: jnp.ndarray, u: jnp.ndarray, d: jnp.nda
     U = jnp.clip(u[0], params.Umin, params.Umax)
     D = d
     dq1 = U  # Firm 1 (controlled) rate of change
-    dq2 = -D  # Firm 2 (competitor) affected by disturbance
+    dq2 = D  # Firm 2 (competitor) affected by disturbance (positive D increases q2)
     return jnp.array([dq1, dq2], dtype=state.dtype)
 
 class CournotPlant(PlantBase):

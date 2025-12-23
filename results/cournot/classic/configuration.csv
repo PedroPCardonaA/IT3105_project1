@@ -1,10 +1,10 @@
 Parameter,Value
-timestamp,2025-12-22 17:05:25
+timestamp,2025-12-23 19:55:54
 plant_type,cournot
 controller_type,classic
 dt,0.01
 epochs,30
-timesteps_per_epoch,200
+timesteps_per_epoch,10
 learning_rate,0.01
 disturbance_min,-0.01
 disturbance_max,0.01
@@ -12,11 +12,11 @@ plant_pmax,100.0
 plant_cm,20.0
 plant_qmin,0.0
 plant_qmax,1.0
-plant_Umin,-0.05
-plant_Umax,0.05
+plant_Umin,-0.5
+plant_Umax,0.5
 plant_q0,"[0.3, 0.3]"
 plant_reference,75.0
-controller_kp,0.5
+controller_kp,0.1
 controller_ki,0.01
 controller_kd,0.01
 controller_i_limit,5.0

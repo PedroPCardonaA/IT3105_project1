@@ -205,8 +205,18 @@ def update_pid_controller(
         print(f"  Theta: {controller.theta}")
         grads = jnp.nan_to_num(grads, nan=0.0, posinf=0.0, neginf=0.0)
     
+    # Clip gradients to prevent extreme updates
+    max_grad_norm = 10.0
+    grad_norm = jnp.linalg.norm(grads)
+    if grad_norm > max_grad_norm:
+        grads = grads * (max_grad_norm / grad_norm)
+    
     # Update parameters using gradient descent
     new_theta = controller.theta - learning_rate * grads
+    
+    # Constrain PID gains to prevent instability
+    # Enforce kp, ki, kd >= 0 and reasonable upper bounds
+    new_theta = jnp.clip(new_theta, a_min=0.0, a_max=100.0)
     
     # Create new controller with updated parameters
     updated_controller = PIDController(
@@ -357,11 +367,38 @@ def update_nn_pid_controller(
     grad_fn = jax.grad(loss_fn)
     grads = grad_fn(controller.params)
     
-    # Update parameters using gradient descent
+    # Clip gradients to prevent explosion
+    max_grad_norm = 10.0
+    grad_norms = [jnp.sqrt(jnp.sum(g['W']**2) + jnp.sum(g['b']**2)) for g in grads]
+    total_grad_norm = jnp.sqrt(sum([gn**2 for gn in grad_norms]))
+    
+    if total_grad_norm > max_grad_norm:
+        clip_factor = max_grad_norm / total_grad_norm
+        grads = jax.tree_util.tree_map(lambda g: g * clip_factor, grads)
+    
+    # Check for NaN/Inf in gradients
+    has_nan = any([jnp.any(jnp.isnan(g['W'])) or jnp.any(jnp.isnan(g['b'])) for g in grads])
+    has_inf = any([jnp.any(jnp.isinf(g['W'])) or jnp.any(jnp.isinf(g['b'])) for g in grads])
+    
+    if has_nan or has_inf:
+        print(f"Warning: NaN or Inf gradients detected in NN-PID")
+        print(f"  Loss value: {loss_value}")
+        grads = jax.tree_util.tree_map(
+            lambda g: jnp.nan_to_num(g, nan=0.0, posinf=0.0, neginf=0.0), 
+            grads
+        )
+    
+    # Update parameters using gradient descent with weight constraints
     new_params = []
+    weight_limit = 50.0  # Prevent extreme weight values
     for layer_grad, layer_param in zip(grads, controller.params):
         new_W = layer_param['W'] - learning_rate * layer_grad['W']
         new_b = layer_param['b'] - learning_rate * layer_grad['b']
+        
+        # Constrain weights to prevent divergence
+        new_W = jnp.clip(new_W, -weight_limit, weight_limit)
+        new_b = jnp.clip(new_b, -weight_limit, weight_limit)
+        
         new_params.append({'W': new_W, 'b': new_b})
     
     # Update controller params in place
